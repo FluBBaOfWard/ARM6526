@@ -1,3 +1,11 @@
+//
+//  ARM6526.h
+//  MOS 6526 "CIA" chip emulator for ARM32.
+//
+//  Created by Fredrik Ahlström on 2006-12-01.
+//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//
+
 #ifndef ARM6526_HEADER
 #define ARM6526_HEADER
 

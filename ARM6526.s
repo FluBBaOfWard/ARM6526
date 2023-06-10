@@ -1,18 +1,30 @@
+//
+//  ARM6526.s
+//  MOS 6526 "CIA" chip emulator for ARM32.
+//
+//  Created by Fredrik Ahlström on 2006-12-01.
+//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//
+
 #ifdef __arm__
 
 #include "ARM6526.i"
 
 	.global m6526Init
 	.global m6526Reset
-
 	.global m6526RunXCycles
 	.global m6526CountFrames
 
 	.syntax unified
 	.arm
 
-	.section .text
+#ifdef GBA
+	.section .ewram, "ax", %progbits	;@ For the GBA
+#else
+	.section .text						;@ For anything else
+#endif
 	.align 2
+
 ;@----------------------------------------------------------------------------
 m6526Init:					;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
@@ -29,149 +41,78 @@ m6526Reset:					;@ r0 = CIA chip.
 	mov r2,#m6526StateSize/4	;@ 36/4=9
 	bl memset_					;@ Clear variables
 
+	mov r1,#-1
+	str r1,[r0,#ciaTimerACount]
+	str r1,[r0,#ciaTimerBCount]
+
 	ldmfd sp!,{lr}
 dummyFunc:
 	bx lr
 
 ;@----------------------------------------------------------------------------
+memCopy:
+;@----------------------------------------------------------------------------
+	ldr r3,=memcpy
+;@----------------------------------------------------------------------------
+thumbCallR3:
+;@----------------------------------------------------------------------------
+	bx r3
+;@----------------------------------------------------------------------------
+m6526SaveState:		;@ In r0=destination, r1=CIA chip. Out r0=state size.
+	.type m6526SaveState STT_FUNC
+;@----------------------------------------------------------------------------
+	add r1,r1,#m6526StateStart
+	mov r2,#m6526StateSize
+	stmfd sp!,{r2,lr}
+	bl memCopy
+
+	ldmfd sp!,{r0,lr}
+	bx lr
+;@----------------------------------------------------------------------------
+m6526LoadState:		;@ In r0=CIA chip, r1=source. Out r0=state size.
+	.type m6526LoadState STT_FUNC
+;@----------------------------------------------------------------------------
+	stmfd sp!,{lr}
+
+	add r0,r0,#m6526StateStart
+	mov r2,#m6526StateSize
+	bl memCopy
+
+	ldmfd sp!,{lr}
+;@----------------------------------------------------------------------------
+m6526GetStateSize:	;@ Out r0=state size.
+	.type m6526GetStateSize STT_FUNC
+;@----------------------------------------------------------------------------
+	mov r0,#m6526StateSize
+	bx lr
+
+;@----------------------------------------------------------------------------
 m6526Read:					;@ r2 = CIA chip, r12 = adr.
 ;@----------------------------------------------------------------------------
-	and r1,r12,#0xF
+	and r1,addy,#0xF
 	ldr pc,[pc,r1,lsl#2]
 ;@---------------------------
 	.long 0
 // ciaReadTbl
 	.long ciaPortA_R			;@ 0x0
 	.long ciaPortB_R			;@ 0x1
-	.long ciaRegisterR			;@ 0x2
-	.long ciaRegisterR			;@ 0x3
+	.long ciaRegisterR			;@ 0x2 Data Direction A
+	.long ciaRegisterR			;@ 0x3 Data Direction B
 	.long ciaTimerA_L_R			;@ 0x4
 	.long ciaTimerA_H_R			;@ 0x5
 	.long ciaTimerB_L_R			;@ 0x6
 	.long ciaTimerB_H_R			;@ 0x7
 	.long ciaTOD_F_R			;@ 0x8
-	.long ciaTOD_S_R			;@ 0x9
-	.long ciaTOD_M_R			;@ 0xA
+	.long ciaRegisterR			;@ 0x9 TOD Seconds
+	.long ciaRegisterR			;@ 0xA TOD Minutes
 	.long ciaTOD_H_R			;@ 0xB
-	.long ciaRegisterR			;@ 0xC
+	.long ciaRegisterR			;@ 0xC Serial IO
 	.long ciaIRQCtrlR			;@ 0xD
-	.long ciaRegisterR			;@ 0xE
-	.long ciaRegisterR			;@ 0xF
+	.long ciaRegisterR			;@ 0xE Ctrl Timer A
+	.long ciaRegisterR			;@ 0xF Ctrl Timer B
 ciaRegisterR:
 	ldrb r0,[r2,r1]
 	bx lr
-;@----------------------------------------------------------------------------
-m6526Write:					;@ r0 = value, r2 = CIA chip, r12 = adr.
-;@----------------------------------------------------------------------------
-	and r1,r12,#0xF
-	ldr pc,[pc,r1,lsl#2]
-;@---------------------------
-	.long 0
-// ciaWriteTbl
-	.long ciaPortA_W			;@ 0x0
-	.long ciaPortB_W			;@ 0x1
-	.long ciaRegisterW			;@ 0x2
-	.long ciaRegisterW			;@ 0x3
-	.long ciaRegisterW			;@ 0x4
-	.long ciaTimerA_H_W			;@ 0x5
-	.long ciaRegisterW			;@ 0x6
-	.long ciaTimerB_H_W			;@ 0x7
-	.long ciaTOD_F_W			;@ 0x8
-	.long ciaTOD_S_W			;@ 0x9
-	.long ciaTOD_M_W			;@ 0xA
-	.long ciaTOD_H_W			;@ 0xB
-	.long ciaRegisterW			;@ 0xC
-	.long ciaIRQCtrlW			;@ 0xD
-	.long ciaCtrlA_W			;@ 0xE
-	.long ciaCtrlB_W			;@ 0xF
-ciaRegisterW:
-	strb r0,[r2,r1]
-	bx lr
-;@----------------------------------------------------------------------------
-ciaPortA_W:					;@ 0x0
-;@----------------------------------------------------------------------------
-	strb r0,[r2,r1]
-	ldr pc,[r0,#ciaPortAFunc]
-	b SetC64GfxBases
-;@----------------------------------------------------------------------------
-ciaPortB_W:					;@ 0x1
-;@----------------------------------------------------------------------------
-	strb r0,[r2,r1]
-	ldr pc,[r0,#ciaPortBFunc]
-;@----------------------------------------------------------------------------
-ciaTimerA_H_W:				;@ 0x5
-;@----------------------------------------------------------------------------
-	strb r0,[r10,#ciaTimerAH]
-	ldr r1,[r10,#ciaTimerACount]
-	tst r1,#0x80000000
-	bmi ciaReloadTA
-	bx lr
-;@----------------------------------------------------------------------------
-ciaTimerB_H_W:				;@ 0x7
-;@----------------------------------------------------------------------------
-	strb r0,[r10,#ciaTimerBH]
-	ldr r1,[r10,#ciaTimerBCount]
-	tst r1,#0x80000000
-	bmi ciaReloadTB
-	bx lr
-;@----------------------------------------------------------------------------
-ciaTOD_F_W:				;@ 0x8
-;@----------------------------------------------------------------------------
-	mov r0,r0,lsl#4
-	strb r0,[r2,#0]				;@ Frame
-	mov r0,#1
-	strb r0,[r2,#8]				;@ Running
-	bx lr
-;@----------------------------------------------------------------------------
-ciaTOD_H_W:					;@ 0xB
-;@----------------------------------------------------------------------------
-	strb r0,[r2,#3]				;@ Hour
-	mov r0,#0
-	strb r0,[r2,#8]				;@ Running
-	bx lr
-;@----------------------------------------------------------------------------
-ciaIRQCtrlW:				;@ 0xD
-;@----------------------------------------------------------------------------
-	ldrb r1,[r2,#ciaIrqCtrl]
-	tst r0,#0x80
-	and r0,r0,#0x1F
-	biceq r1,r1,r0
-	orrne r1,r1,r0
-	strb r1,[r2,#ciaIrqCtrl]
-//	b ciaIRQCheck
-	bx lr
-;@----------------------------------------------------------------------------
-ciaCtrlA_W:					;@ 0xE
-;@----------------------------------------------------------------------------
-	strb r0,[r2,#ciaCtrlTA]
-
-//	tst r0,#0x01				;@ Timer enable?
-//	ldreqb r1,[r2,#ciaIrq]
-//	biceq r1,r1,#0x01
-//	streqb r1,[r2,#ciaIrq]
-
-	tst r0,#0x10				;@ Force load?
-	bxeq lr
-ciaReloadTA:
-	ldrb r0,[r2,#ciaTimerAL]
-	ldrb r1,[r2,#ciaTimerAH]
-	orr r0,r0,r1,lsl#8
-	str r0,[r2,#ciaTimerACount]
-	bx lr
-;@----------------------------------------------------------------------------
-ciaCtrlB_W:					;@ 0xF
-;@----------------------------------------------------------------------------
-	strb r0,[r2,#ciaCtrlTB]
-
-	tst r0,#0x10				;@ Force load?
-	bxeq lr
-ciaReloadTB:
-	ldrb r0,[r2,#ciaTimerBL]
-	ldrb r1,[r2,#ciaTimerBH]
-	orr r0,r0,r1,lsl#8
-	str r0,[r2,#ciaTimerBCount]
-	bx lr
-
 ;@----------------------------------------------------------------------------
 ciaPortA_R:					;@ 0x0 Data Port A
 ;@----------------------------------------------------------------------------
@@ -224,6 +165,21 @@ ciaTimerB_H_R:				;@ 0x7
 	and r0,r0,#0xFF
 	bx lr
 ;@----------------------------------------------------------------------------
+ciaTOD_F_R:
+;@----------------------------------------------------------------------------
+	mov r0,#1
+	strb r0,[r2,#ciaTodRunning]	;@ Running
+	ldrb r0,[r2,#ciaTodFrame]	;@ Frame
+	mov r0,r0,lsr#4
+	bx lr
+;@----------------------------------------------------------------------------
+ciaTOD_H_R:
+;@----------------------------------------------------------------------------
+	mov r0,#0
+	strb r0,[r2,#ciaTodRunning]	;@ Running
+	ldrb r0,[r2,#ciaTodHour]	;@ Hour
+	bx lr
+;@----------------------------------------------------------------------------
 ciaIRQCtrlR:				;@ 0xD
 ;@----------------------------------------------------------------------------
 	ldrb r0,[r2,#ciaIrqCtrl]
@@ -232,6 +188,117 @@ ciaIRQCtrlR:				;@ 0xD
 	orrne r0,r0,#0x80
 	mov r1,#0
 	strb r1,[r10,#ciaIrq]
+	bx lr
+
+;@----------------------------------------------------------------------------
+m6526Write:					;@ r0 = value, r2 = CIA chip, r12 = adr.
+;@----------------------------------------------------------------------------
+	and r1,addy,#0xF
+	ldr pc,[pc,r1,lsl#2]
+	.long 0
+// ciaWriteTbl
+	.long ciaPortA_W			;@ 0x0
+	.long ciaPortB_W			;@ 0x1
+	.long ciaRegisterW			;@ 0x2 Data Direction A
+	.long ciaRegisterW			;@ 0x3 Data Direction B
+	.long ciaRegisterW			;@ 0x4
+	.long ciaTimerA_H_W			;@ 0x5
+	.long ciaRegisterW			;@ 0x6
+	.long ciaTimerB_H_W			;@ 0x7
+	.long ciaTOD_F_W			;@ 0x8
+	.long ciaRegisterW			;@ 0x9 TOD Seconds
+	.long ciaRegisterW			;@ 0xA TOD Minutes
+	.long ciaTOD_H_W			;@ 0xB
+	.long ciaRegisterW			;@ 0xC Serial IO
+	.long ciaIRQCtrlW			;@ 0xD
+	.long ciaCtrlTA_W			;@ 0xE
+	.long ciaCtrlTB_W			;@ 0xF
+ciaRegisterW:
+	strb r0,[r2,r1]
+	bx lr
+;@----------------------------------------------------------------------------
+ciaPortA_W:					;@ 0x0
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaDataPortA]
+	ldr pc,[r2,#ciaPortAFunc]
+	b SetC64GfxBases
+;@----------------------------------------------------------------------------
+ciaPortB_W:					;@ 0x1
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaDataPortB]
+	ldr pc,[r2,#ciaPortBFunc]
+;@----------------------------------------------------------------------------
+ciaTimerA_H_W:				;@ 0x5
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaTimerAH]
+	ldr r1,[r2,#ciaTimerACount]
+	tst r1,#0x80000000
+	bmi ciaReloadTA
+	bx lr
+;@----------------------------------------------------------------------------
+ciaTimerB_H_W:				;@ 0x7
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaTimerBH]
+	ldr r1,[r2,#ciaTimerBCount]
+	tst r1,#0x80000000
+	bmi ciaReloadTB
+	bx lr
+;@----------------------------------------------------------------------------
+ciaTOD_F_W:					;@ 0x8
+;@----------------------------------------------------------------------------
+	mov r0,r0,lsl#4
+	strb r0,[r2,#ciaTodFrame]	;@ Frame
+	mov r0,#1
+	strb r0,[r2,#ciaTodRunning]	;@ Running
+	bx lr
+;@----------------------------------------------------------------------------
+ciaTOD_H_W:					;@ 0xB
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaTodHour]	;@ Hour
+	mov r0,#0
+	strb r0,[r2,#ciaTodRunning]	;@ Running
+	bx lr
+;@----------------------------------------------------------------------------
+ciaIRQCtrlW:				;@ 0xD
+;@----------------------------------------------------------------------------
+	ldrb r1,[r2,#ciaIrqCtrl]
+	tst r0,#0x80
+	and r0,r0,#0x1F
+	biceq r1,r1,r0
+	orrne r1,r1,r0
+	strb r1,[r2,#ciaIrqCtrl]
+//	b ciaIRQCheck
+	bx lr
+;@----------------------------------------------------------------------------
+ciaCtrlTA_W:				;@ 0xE
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaCtrlTA]
+
+//	tst r0,#0x01				;@ Timer enable?
+//	ldreqb r1,[r2,#ciaIrq]
+//	biceq r1,r1,#0x01
+//	streqb r1,[r2,#ciaIrq]
+
+	tst r0,#0x10				;@ Force load?
+	bxeq lr
+ciaReloadTA:
+	ldrb r0,[r2,#ciaTimerAL]
+	ldrb r1,[r2,#ciaTimerAH]
+	orr r0,r0,r1,lsl#8
+	str r0,[r2,#ciaTimerACount]
+	bx lr
+;@----------------------------------------------------------------------------
+ciaCtrlTB_W:				;@ 0xF
+;@----------------------------------------------------------------------------
+	strb r0,[r2,#ciaCtrlTB]
+
+	tst r0,#0x10				;@ Force load?
+	bxeq lr
+ciaReloadTB:
+	ldrb r0,[r2,#ciaTimerBL]
+	ldrb r1,[r2,#ciaTimerBH]
+	orr r0,r0,r1,lsl#8
+	str r0,[r2,#ciaTimerBCount]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -255,7 +322,7 @@ countSeconds:				;@ r0 = CIA chip.
 	ldrb r1,[r0,#ciaTodSecond]	;@ Second
 	add r1,r1,#1
 	and r2,r1,#0xF
-	cmp r2,#9
+	cmp r2,#0x9
 	andhi r1,r1,#0xF0
 	addhi r1,r1,#0x10
 	cmp r1,#0x59
@@ -290,7 +357,7 @@ countHours:					;@ r0 = CIA chip.
 	addhi r1,r1,#0x10
 	and r2,r1,#0x3F
 	cmp r2,#0x12
-	bichi r1,r1,#0x32
+	bichi r1,r1,#0x3F
 	eorhi r1,r1,#0x80
 	strb r1,[r0,#ciaTodHour]	;@ Hour
 

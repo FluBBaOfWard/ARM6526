@@ -1,3 +1,11 @@
+//
+//  ARM6526.i
+//  MOS 6526 "CIA" chip emulator for ARM32.
+//
+//  Created by Fredrik Ahlström on 2006-12-01.
+//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//
+;@ ASM header for the MOS 6526 emulator
 
 				;@ r0,r1,r2=temp regs
 	addy		.req r12		;@ Keep this at r12 (scratch for APCS)
