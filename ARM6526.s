@@ -132,7 +132,7 @@ ciaPortB_R:					;@ 0x1 Data Port B Read
 ;@----------------------------------------------------------------------------
 	ldr pc,[r2,#ciaPortBReadFunc]
 ;@----------------------------------------------------------------------------
-ciaTimerA_L_R:				;@ 0x4
+ciaTimerA_L_R:				;@ 0x4 Timer A Low Read
 ;@----------------------------------------------------------------------------
 	ldrb r0,[r2,#ciaTimerACount]
 	bx lr
@@ -178,7 +178,7 @@ ciaIRQCtrlR:				;@ 0xD
 	ands r0,r0,r1
 	orrne r0,r0,#0x80
 	mov r1,#0
-	strb r1,[r10,#ciaIrq]
+	strb r1,[r2,#ciaIrq]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -192,9 +192,9 @@ m6526Write:					;@ r0 = value, r2 = CIA chip, r12 = adr.
 	.long ciaPortB_W			;@ 0x1
 	.long ciaRegisterW			;@ 0x2 Data Direction A
 	.long ciaRegisterW			;@ 0x3 Data Direction B
-	.long ciaRegisterW			;@ 0x4
+	.long ciaRegisterW			;@ 0x4 Timer A Low
 	.long ciaTimerA_H_W			;@ 0x5
-	.long ciaRegisterW			;@ 0x6
+	.long ciaRegisterW			;@ 0x6 Timer B Low
 	.long ciaTimerB_H_W			;@ 0x7
 	.long ciaTOD_F_W			;@ 0x8
 	.long ciaRegisterW			;@ 0x9 TOD Seconds
@@ -258,6 +258,7 @@ ciaIRQCtrlW:				;@ 0xD
 	orrne r1,r1,r0
 	strb r1,[r2,#ciaIrqCtrl]
 //	b ciaIRQCheck
+//	ldr pc,[r2,#ciaIrqFunc]
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaCtrlTA_W:				;@ 0xE
@@ -303,9 +304,8 @@ m6526CountFrames:			;@ r0 = CIA chip.
 	cmp r1,#0x9F
 	movhi r1,#0
 	strb r1,[r0,#ciaTodFrame]	;@ Frame
-	bhi countSeconds
 
-	bx lr
+	bxls lr						;@ Continue if higher
 ;@----------------------------------------------------------------------------
 countSeconds:				;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
@@ -318,9 +318,8 @@ countSeconds:				;@ r0 = CIA chip.
 	cmp r1,#0x59
 	movhi r1,#0
 	strb r1,[r0,#ciaTodSecond]	;@ Second
-	bhi countMinutes
 
-	bx lr
+	bxls lr						;@ Continue if higher
 ;@----------------------------------------------------------------------------
 countMinutes:				;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
@@ -333,9 +332,8 @@ countMinutes:				;@ r0 = CIA chip.
 	cmp r1,#0x59
 	movhi r1,#0
 	strb r1,[r0,#ciaTodMinute]	;@ Minute
-	bhi countHours
 
-	bx lr
+	bxls lr						;@ Continue if higher
 ;@----------------------------------------------------------------------------
 countHours:					;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------

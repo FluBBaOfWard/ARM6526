@@ -1,0 +1,5 @@
+ARM6526 To do
+--------------
+
+	Fix timers.
+	Add timer calculation function.
