@@ -74,10 +74,14 @@ typedef struct {
 	u8 ciaPadding0[3];
 // m6526StateEnd
 
+	/// The function to call when reading Data Port A
+	u32 *portAReadFunc;
+	/// The function to call when reading Data Port B
+	u32 *portBReadFunc;
 	/// The function to call when writing Data Port A
-	u32 *portAFunc;
+	u32 *portAWriteFunc;
 	/// The function to call when writing Data Port B
-	u32 *portBFunc;
+	u32 *portBWriteFunc;
 	/// The function to call when IRQ happens
 	u32 *irqFunc;
 } M6526;
@@ -87,13 +91,13 @@ typedef struct {
  * Initializes the port and irq functions and calls reset.
  * @param  *chip: The M6526 chip to initialize.
  */
-void m6581Init(const M6526 *chip);
+void m6526Init(const M6526 *chip);
 
 /**
  * Initializes the state of the chip
  * @param  *chip: The M6526 chip to reset.
  */
-void m6581Reset(const M6526 *chip);
+void m6526Reset(const M6526 *chip);
 
 /**
  * Saves the state of the M6526 chip to the destination.

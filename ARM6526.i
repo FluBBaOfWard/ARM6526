@@ -49,9 +49,11 @@ ciaIrq:			.byte 0			;@ Interrrupt Pins
 ciaPadding0:	.byte 0,0
 m6526StateEnd:
 
-ciaPortAFunc:	.long 0
-ciaPortBFunc:	.long 0
-ciaIrqFunc:		.long 0
+ciaPortAReadFunc:	.long 0
+ciaPortBReadFunc:	.long 0
+ciaPortAWriteFunc:	.long 0
+ciaPortBWriteFunc:	.long 0
+ciaIrqFunc:			.long 0
 
 m6526End:
 

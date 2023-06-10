@@ -14,6 +14,8 @@
 	.global m6526Reset
 	.global m6526RunXCycles
 	.global m6526CountFrames
+	.global m6526Read
+	.global m6526Write
 
 	.syntax unified
 	.arm
@@ -29,8 +31,10 @@
 m6526Init:					;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
 	adr r1,dummyFunc
-	str r1,[r0,#ciaPortAFunc]
-	str r1,[r0,#ciaPortBFunc]
+	str r1,[r0,#ciaPortAReadFunc]
+	str r1,[r0,#ciaPortBReadFunc]
+	str r1,[r0,#ciaPortAWriteFunc]
+	str r1,[r0,#ciaPortBWriteFunc]
 	str r1,[r0,#ciaIrqFunc]
 ;@----------------------------------------------------------------------------
 m6526Reset:					;@ r0 = CIA chip.
@@ -41,12 +45,18 @@ m6526Reset:					;@ r0 = CIA chip.
 	mov r2,#m6526StateSize/4	;@ 36/4=9
 	bl memset_					;@ Clear variables
 
+	mov r1,#0x01				;@ TimerA enabled?
+	strb r1,[r0,#ciaIrqCtrl]
+	strb r1,[r0,#ciaTodRunning]	;@ Running?
+
 	mov r1,#-1
 	str r1,[r0,#ciaTimerACount]
 	str r1,[r0,#ciaTimerBCount]
 
 	ldmfd sp!,{lr}
+	bx lr
 dummyFunc:
+	mov r0,#0xFF
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -114,32 +124,13 @@ ciaRegisterR:
 	ldrb r0,[r2,r1]
 	bx lr
 ;@----------------------------------------------------------------------------
-ciaPortA_R:					;@ 0x0 Data Port A
+ciaPortA_R:					;@ 0x0 Data Port A Read
 ;@----------------------------------------------------------------------------
-	ldr r0,=joy0state
-	ldrb r0,[r0]
-//	ldrb r0,[r2,#ciaDataDirA]
-	eor r0,r0,#0xFF
-	bx lr
+	ldr pc,[r2,#ciaPortAReadFunc]
 ;@----------------------------------------------------------------------------
-ciaPortB_R:					;@ 0x1 Data Port B
+ciaPortB_R:					;@ 0x1 Data Port B Read
 ;@----------------------------------------------------------------------------
-	ldrb r2,[r2,#ciaDataPortA]
-	eor r2,r2,#0xFF
-	ldr r12,=Keyboard_M
-	mov r0,#0xFF
-ciaPortBLoop:
-	movs r2,r2,lsr#1
-	ldrbcs r1,[r12]
-	andcs r0,r0,r1
-	add r12,r12,#1
-	bne ciaPortBLoop
-	ldr r1,=joy0state
-	ldrb r1,[r1]
-	eor r1,r1,#0xFF
-	and r0,r0,r1
-
-	bx lr
+	ldr pc,[r2,#ciaPortBReadFunc]
 ;@----------------------------------------------------------------------------
 ciaTimerA_L_R:				;@ 0x4
 ;@----------------------------------------------------------------------------
@@ -165,7 +156,7 @@ ciaTimerB_H_R:				;@ 0x7
 	and r0,r0,#0xFF
 	bx lr
 ;@----------------------------------------------------------------------------
-ciaTOD_F_R:
+ciaTOD_F_R:					;@ 0x8
 ;@----------------------------------------------------------------------------
 	mov r0,#1
 	strb r0,[r2,#ciaTodRunning]	;@ Running
@@ -173,7 +164,7 @@ ciaTOD_F_R:
 	mov r0,r0,lsr#4
 	bx lr
 ;@----------------------------------------------------------------------------
-ciaTOD_H_R:
+ciaTOD_H_R:					;@ 0xB
 ;@----------------------------------------------------------------------------
 	mov r0,#0
 	strb r0,[r2,#ciaTodRunning]	;@ Running
@@ -220,13 +211,12 @@ ciaRegisterW:
 ciaPortA_W:					;@ 0x0
 ;@----------------------------------------------------------------------------
 	strb r0,[r2,#ciaDataPortA]
-	ldr pc,[r2,#ciaPortAFunc]
-	b SetC64GfxBases
+	ldr pc,[r2,#ciaPortAWriteFunc]
 ;@----------------------------------------------------------------------------
 ciaPortB_W:					;@ 0x1
 ;@----------------------------------------------------------------------------
 	strb r0,[r2,#ciaDataPortB]
-	ldr pc,[r2,#ciaPortBFunc]
+	ldr pc,[r2,#ciaPortBWriteFunc]
 ;@----------------------------------------------------------------------------
 ciaTimerA_H_W:				;@ 0x5
 ;@----------------------------------------------------------------------------
