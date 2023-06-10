@@ -1,0 +1,9 @@
+ARM6581 revision history
+-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+V0.2.0 - 2023-06-10 (FluBBa)
+	Reworked for devkitARM.
+
+V0.1.0 - 2006-xx-xx (FluBBa)
+	Started to code.

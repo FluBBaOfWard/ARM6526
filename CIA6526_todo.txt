@@ -1,0 +1,4 @@
+ARM6526 To do
+--------------
+
+	Make core completly objectified.
