@@ -223,17 +223,17 @@ ciaPortB_W:					;@ 0x1
 ciaTimerA_H_W:				;@ 0x5
 ;@----------------------------------------------------------------------------
 	strb r0,[r2,#ciaTimerAH]
-	ldr r1,[r2,#ciaTimerACount]
-	tst r1,#0x80000000
-	bmi ciaReloadTA
+	ldrb r1,[r2,#ciaCtrlTA]
+	tst r1,#0x01				;@ Timer A active?
+	beq ciaReloadTA
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaTimerB_H_W:				;@ 0x7
 ;@----------------------------------------------------------------------------
 	strb r0,[r2,#ciaTimerBH]
-	ldr r1,[r2,#ciaTimerBCount]
-	tst r1,#0x80000000
-	bmi ciaReloadTB
+	ldrb r1,[r2,#ciaCtrlTB]
+	tst r1,#0x01				;@ Timer B active?
+	beq ciaReloadTB
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaTOD_F_W:					;@ 0x8
@@ -364,9 +364,11 @@ m6526RunXCycles:			;@ r2 = CIA chip.
 	orr r0,r0,#1				;@ Set timer A underflow
 
 	tst r1,#0x08				;@ Contigous/oneshoot?
+	bicne r1,#0x01				;@ Deactivate Timer A.
+	strbne r1,[r2,#ciaCtrlTA]
 	ldrheq r1,[r2,#ciaTimerAL]
 	addeq r12,r12,r1
-	movne r12,#-1
+	movne r12,#0
 noTimerA:
 	str r12,[r2,#ciaTimerACount]
 
@@ -382,9 +384,11 @@ doTimerB:
 	orr r0,r0,#2				;@ Set timer B underflow
 
 	tst r1,#0x08				;@ Contigous/oneshoot?
+	bicne r1,#0x01				;@ Deactivate Timer A.
+	strbne r1,[r2,#ciaCtrlTB]
 	ldrheq r1,[r2,#ciaTimerBL]
 	addeq r12,r12,r1
-	movne r12,#-1
+	movne r12,#0
 noTimerB:
 	str r12,[r2,#ciaTimerBCount]
 checkTimerIRQ:
