@@ -169,9 +169,15 @@ ciaTOD_H_R:					;@ 0xB
 ;@----------------------------------------------------------------------------
 ciaIRQCtrlR:				;@ 0xD
 ;@----------------------------------------------------------------------------
-	ldrb r0,[r2,#ciaIrqCtrl]
-	ldrb r1,[r2,#ciaIrq]
-	ands r0,r0,r1
+	stmfd sp!,{lr}
+	mov r0,#0
+	mov lr,pc
+	ldr pc,[r2,#ciaIrqFunc]		;@ Clear IRQ pin
+	ldmfd sp!,{lr}
+
+	ldrb r0,[r2,#ciaIrq]
+	ldrb r1,[r2,#ciaIrqCtrl]
+	ands r1,r1,r0
 	orrne r0,r0,#0x80
 	mov r1,#0
 	strb r1,[r2,#ciaIrq]
@@ -253,9 +259,10 @@ ciaIRQCtrlW:				;@ 0xD
 	biceq r1,r1,r0
 	orrne r1,r1,r0
 	strb r1,[r2,#ciaIrqCtrl]
-//	b ciaIRQCheck
-//	ldr pc,[r2,#ciaIrqFunc]
-	bx lr
+
+	ldrb r0,[r2,#ciaIrq]
+	and r0,r0,r1
+	ldr pc,[r2,#ciaIrqFunc]		;@ Update IRQ pin
 ;@----------------------------------------------------------------------------
 ciaCtrlTA_W:				;@ 0xE
 ;@----------------------------------------------------------------------------
@@ -345,6 +352,7 @@ countHours:					;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
 m6526RunXCycles:			;@ r2 = CIA chip.
 ;@----------------------------------------------------------------------------
+	mov r0,#0					;@ Timer underflow
 	ldrb r1,[r2,#ciaCtrlTA]
 	tst r1,#0x01				;@ Timer A active?
 	beq doTimerB
@@ -353,13 +361,11 @@ m6526RunXCycles:			;@ r2 = CIA chip.
 	ldr r12,[r2,#ciaTimerACount]
 	subs r12,r12,#63			;@ Cycles per scanline
 	bcs noTimerA
-	ldrb r0,[r2,#ciaIrq]		;@ Set cia timer A irq
-	orr r0,r0,#1
-	strb r0,[r2,#ciaIrq]
+	orr r0,r0,#1				;@ Set timer A underflow
 
 	tst r1,#0x08				;@ Contigous/oneshoot?
-	ldrheq r0,[r2,#ciaTimerAL]
-	addeq r12,r12,r0
+	ldrheq r1,[r2,#ciaTimerAL]
+	addeq r12,r12,r1
 	movne r12,#-1
 noTimerA:
 	str r12,[r2,#ciaTimerACount]
@@ -367,22 +373,30 @@ noTimerA:
 doTimerB:
 	ldrb r1,[r2,#ciaCtrlTB]
 	tst r1,#0x01				;@ Timer B active?
-	bxeq lr
+	beq checkTimerIRQ
 	tst r1,#0x60				;@ Count 02 clock or something else?
-	bxne lr
+	bne checkTimerIRQ
 	ldr r12,[r2,#ciaTimerBCount]
 	subs r12,r12,#63			;@ Cycles per scanline
 	bcs noTimerB
-	ldrb r0,[r2,#ciaIrq]		;@ Set cia timer B irq
-	orr r0,r0,#2
-	strb r0,[r2,#ciaIrq]
+	orr r0,r0,#2				;@ Set timer B underflow
 
 	tst r1,#0x08				;@ Contigous/oneshoot?
-	ldrheq r0,[r2,#ciaTimerBL]
-	addeq r12,r12,r0
+	ldrheq r1,[r2,#ciaTimerBL]
+	addeq r12,r12,r1
 	movne r12,#-1
 noTimerB:
 	str r12,[r2,#ciaTimerBCount]
+checkTimerIRQ:
+	cmp r0,#0
+	bxeq lr
+
+	ldrb r1,[r2,#ciaIrq]
+	orr r0,r0,r1
+	strb r0,[r2,#ciaIrq]
+	ldrb r1,[r2,#ciaIrqCtrl]
+	ands r0,r0,r1
+	ldrne pc,[r2,#ciaIrqFunc]		;@ Set IRQ pin?
 	bx lr
 ;@----------------------------------------------------------------------------
 

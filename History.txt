@@ -2,7 +2,7 @@ ARM6581 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V0.2.0 - 2023-06-10 (FluBBa)
+V0.2.0 - 2023-06-11 (FluBBa)
 	Reworked for devkitARM.
 
 V0.1.1 - 2023-06-04 (FluBBa)
