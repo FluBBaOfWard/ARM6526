@@ -139,9 +139,7 @@ ciaTimerA_L_R:				;@ 0x4 Timer A Low Read
 ;@----------------------------------------------------------------------------
 ciaTimerA_H_R:				;@ 0x5
 ;@----------------------------------------------------------------------------
-	ldr r0,[r2,#ciaTimerACount]
-	mov r0,r0,lsr#8
-	and r0,r0,#0xFF
+	ldrb r0,[r2,#ciaTimerACount+1]
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaTimerB_L_R:				;@ 0x6
@@ -151,9 +149,7 @@ ciaTimerB_L_R:				;@ 0x6
 ;@----------------------------------------------------------------------------
 ciaTimerB_H_R:				;@ 0x7
 ;@----------------------------------------------------------------------------
-	ldr r0,[r2,#ciaTimerBCount]
-	mov r0,r0,lsr#8
-	and r0,r0,#0xFF
+	ldrb r0,[r2,#ciaTimerBCount+1]
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaTOD_F_R:					;@ 0x8
@@ -167,7 +163,7 @@ ciaTOD_F_R:					;@ 0x8
 ciaTOD_H_R:					;@ 0xB
 ;@----------------------------------------------------------------------------
 	mov r0,#0
-	strb r0,[r2,#ciaTodRunning]	;@ Running
+	strb r0,[r2,#ciaTodRunning]	;@ Not Running
 	ldrb r0,[r2,#ciaTodHour]	;@ Hour
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -246,7 +242,7 @@ ciaTOD_H_W:					;@ 0xB
 ;@----------------------------------------------------------------------------
 	strb r0,[r2,#ciaTodHour]	;@ Hour
 	mov r0,#0
-	strb r0,[r2,#ciaTodRunning]	;@ Running
+	strb r0,[r2,#ciaTodRunning]	;@ Not Running
 	bx lr
 ;@----------------------------------------------------------------------------
 ciaIRQCtrlW:				;@ 0xD
@@ -273,9 +269,7 @@ ciaCtrlTA_W:				;@ 0xE
 	tst r0,#0x10				;@ Force load?
 	bxeq lr
 ciaReloadTA:
-	ldrb r0,[r2,#ciaTimerAL]
-	ldrb r1,[r2,#ciaTimerAH]
-	orr r0,r0,r1,lsl#8
+	ldrh r0,[r2,#ciaTimerAL]
 	str r0,[r2,#ciaTimerACount]
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -286,9 +280,7 @@ ciaCtrlTB_W:				;@ 0xF
 	tst r0,#0x10				;@ Force load?
 	bxeq lr
 ciaReloadTB:
-	ldrb r0,[r2,#ciaTimerBL]
-	ldrb r1,[r2,#ciaTimerBH]
-	orr r0,r0,r1,lsl#8
+	ldrh r0,[r2,#ciaTimerBL]
 	str r0,[r2,#ciaTimerBCount]
 	bx lr
 
@@ -351,5 +343,48 @@ countHours:					;@ r0 = CIA chip.
 
 	bx lr
 ;@----------------------------------------------------------------------------
+m6526RunXCycles:			;@ r2 = CIA chip.
+;@----------------------------------------------------------------------------
+	ldrb r1,[r2,#ciaCtrlTA]
+	tst r1,#0x01				;@ Timer A active?
+	beq doTimerB
+//	tst r1,#0x20				;@ Count 02 clock or CNT signals?
+//	bne doTimerB
+	ldr r12,[r2,#ciaTimerACount]
+	subs r12,r12,#63			;@ Cycles per scanline
+	bcs noTimerA
+	ldrb r0,[r2,#ciaIrq]		;@ Set cia timer A irq
+	orr r0,r0,#1
+	strb r0,[r2,#ciaIrq]
+
+	tst r1,#0x08				;@ Contigous/oneshoot?
+	ldrheq r0,[r2,#ciaTimerAL]
+	addeq r12,r12,r0
+	movne r12,#-1
+noTimerA:
+	str r12,[r2,#ciaTimerACount]
+
+doTimerB:
+	ldrb r1,[r2,#ciaCtrlTB]
+	tst r1,#0x01				;@ Timer B active?
+	bxeq lr
+	tst r1,#0x60				;@ Count 02 clock or something else?
+	bxne lr
+	ldr r12,[r2,#ciaTimerBCount]
+	subs r12,r12,#63			;@ Cycles per scanline
+	bcs noTimerB
+	ldrb r0,[r2,#ciaIrq]		;@ Set cia timer B irq
+	orr r0,r0,#2
+	strb r0,[r2,#ciaIrq]
+
+	tst r1,#0x08				;@ Contigous/oneshoot?
+	ldrheq r0,[r2,#ciaTimerBL]
+	addeq r12,r12,r0
+	movne r12,#-1
+noTimerB:
+	str r12,[r2,#ciaTimerBCount]
+	bx lr
+;@----------------------------------------------------------------------------
+
 	.end
 #endif // #ifdef __arm__
