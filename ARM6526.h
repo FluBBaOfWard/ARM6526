@@ -14,38 +14,38 @@ extern "C" {
 #endif
 
 typedef struct {
-	/// 0x00 Data Port A
+	/// 0x0 Data Port A
 	u8 dataPortA;
-	/// 0x01 Data Port B
+	/// 0x1 Data Port B
 	u8 dataPortB;
-	/// 0x02 Data Direction A
+	/// 0x2 Data Direction A
 	u8 dataDirA;
-	/// 0x03 Data Direction B
+	/// 0x3 Data Direction B
 	u8 dataDirB;
-	/// 0x04 Timer A Low
+	/// 0x4 Timer A Low
 	u8 timerAL;
-	/// 0x05 Timer A High
+	/// 0x5 Timer A High
 	u8 timerAH;
-	/// 0x06 Timer B Low
+	/// 0x6 Timer B Low
 	u8 timerBL;
-	/// 0x07 Timer B High
+	/// 0x7 Timer B High
 	u8 timerBH;
 //ciaTOD:
-	/// 0x08 Time of Day, tenth of Seconds
+	/// 0x8 Time of Day, tenth of Seconds
 	u8 tod0;
-	/// 0x09 Time of Day, Seconds
+	/// 0x9 Time of Day, Seconds
 	u8 tod1;
-	/// 0x0A Time of Day, Minutes
+	/// 0xA Time of Day, Minutes
 	u8 tod2;
-	/// 0x0B Time of Day, Hours
+	/// 0xB Time of Day, Hours
 	u8 tod3;
-	/// 0x0C Serial IO Port
+	/// 0xC Serial IO Port
 	u8 sIOPort;
-	/// 0x0D Interrrupt Control & Status
+	/// 0xD Interrrupt Control & Status
 	u8 irqCtrl;
-	/// 0x0E Control Timer A
+	/// 0xE Control Timer A
 	u8 ctrlTA;
-	/// 0x0F Control Timer B
+	/// 0xF Control Timer B
 	u8 ctrlTB;
 
 	/// The Live counter of Timer A

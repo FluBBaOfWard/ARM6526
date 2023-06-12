@@ -1,4 +1,4 @@
-ARM6581 revision history
+ARM6569 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
