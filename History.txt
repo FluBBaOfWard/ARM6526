@@ -2,8 +2,9 @@ ARM6569 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V0.2.0 - 2023-06-11 (FluBBa)
+V0.2.0 - 2023-06-14 (FluBBa)
 	Reworked for devkitARM.
+	Added load/save state.
 
 V0.1.1 - 2023-06-04 (FluBBa)
 	Started to rework for devkitARM.

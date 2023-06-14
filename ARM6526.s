@@ -16,6 +16,9 @@
 	.global m6526CountFrames
 	.global m6526Read
 	.global m6526Write
+	.global m6526SaveState
+	.global m6526LoadState
+	.global m6526GetStateSize
 
 	.syntax unified
 	.arm
