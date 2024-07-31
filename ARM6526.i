@@ -3,9 +3,12 @@
 //  MOS 6526 "CIA" chip emulator for ARM32.
 //
 //  Created by Fredrik Ahlström on 2006-12-01.
-//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2006-2024 Fredrik Ahlström. All rights reserved.
 //
-;@ ASM header for the MOS 6526 emulator
+
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
 
 				;@ r0,r1,r2=temp regs
 	addy		.req r12		;@ Keep this at r12 (scratch for APCS)
@@ -15,8 +18,8 @@ m6526Start:
 m6526StateStart:
 ciaDataPortA:	.byte 0			;@ 0x0 Data Port A
 ciaDataPortB:	.byte 0			;@ 0x1 Data Port B
-ciaDataDirA:	.byte 0			;@ 0x2 Data Direction A
-ciaDataDirB:	.byte 0			;@ 0x3 Data Direction B
+ciaDataDirA:	.byte 0			;@ 0x2 Data Direction Port A
+ciaDataDirB:	.byte 0			;@ 0x3 Data Direction Port B
 ciaTimerA:						;@ Timer A Latch
 ciaTimerAL:		.byte 0			;@ 0x4 Timer A Low
 ciaTimerAH:		.byte 0			;@ 0x5 Timer A High

@@ -1,4 +1,3 @@
 ARM6526 To do
 --------------
 
-	Fix timer A to B cascading.

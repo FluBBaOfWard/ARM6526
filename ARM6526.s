@@ -3,7 +3,7 @@
 //  MOS 6526 "CIA" chip emulator for ARM32.
 //
 //  Created by Fredrik Ahlström on 2006-12-01.
-//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2006-2024 Fredrik Ahlström. All rights reserved.
 //
 
 #ifdef __arm__
@@ -29,7 +29,6 @@
 	.section .text						;@ For anything else
 #endif
 	.align 2
-
 ;@----------------------------------------------------------------------------
 m6526Init:					;@ r0 = CIA chip.
 ;@----------------------------------------------------------------------------
@@ -172,18 +171,18 @@ ciaTOD_H_R:					;@ 0xB
 ;@----------------------------------------------------------------------------
 ciaIRQCtrlR:				;@ 0xD
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{lr}
-	mov r0,#0
-	mov lr,pc
-	ldr pc,[r2,#ciaIrqFunc]		;@ Clear IRQ pin
-	ldmfd sp!,{lr}
-
 	ldrb r0,[r2,#ciaIrq]
 	ldrb r1,[r2,#ciaIrqCtrl]
 	ands r1,r1,r0
 	orrne r0,r0,#0x80
-	mov r1,#0
-	strb r1,[r2,#ciaIrq]
+
+	stmfd sp!,{r0,lr}
+	mov r0,#0
+	strb r0,[r2,#ciaIrq]
+	mov lr,pc
+	ldr pc,[r2,#ciaIrqFunc]		;@ Clear IRQ pin
+	ldmfd sp!,{r0,lr}
+
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -380,7 +379,10 @@ doTimerB:
 	tst r1,#0x01				;@ Timer B active?
 	beq checkTimerIRQ
 	tst r1,#0x60				;@ Count 02 clock or something else?
-	bne checkTimerIRQ
+	beq normalBTimer
+	tst r0,#1					;@ TimerA underflow?
+	beq checkTimerIRQ
+normalBTimer:
 	ldr r12,[r2,#ciaTimerBCount]
 	subs r12,r12,#63			;@ Cycles per scanline
 	bcs noTimerB

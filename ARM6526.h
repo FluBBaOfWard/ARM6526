@@ -3,7 +3,7 @@
 //  MOS 6526 "CIA" chip emulator for ARM32.
 //
 //  Created by Fredrik Ahlström on 2006-12-01.
-//  Copyright © 2006-2023 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2006-2024 Fredrik Ahlström. All rights reserved.
 //
 
 #ifndef ARM6526_HEADER
@@ -18,9 +18,9 @@ typedef struct {
 	u8 dataPortA;
 	/// 0x1 Data Port B
 	u8 dataPortB;
-	/// 0x2 Data Direction A
+	/// 0x2 Data Direction Port A
 	u8 dataDirA;
-	/// 0x3 Data Direction B
+	/// 0x3 Data Direction Port B
 	u8 dataDirB;
 	/// 0x4 Timer A Low
 	u8 timerAL;
@@ -65,25 +65,25 @@ typedef struct {
 	u8 todAFrame;
 	/// The TOD Alarm Second
 	u8 todASecond;
-	/// The TOD Alarm Frame
+	/// The TOD Alarm Minute
 	u8 todAMinute;
-	/// The TOD Alarm Frame
+	/// The TOD Alarm Hour
 	u8 todAHour;
-	/// The TOD Alarm Frame
+	/// The TOD running
 	u8 todRunning;
 	u8 ciaPadding0[3];
 // m6526StateEnd
 
 	/// The function to call when reading Data Port A
-	u32 *portAReadFunc;
+	u8 (*portAReadFunc)(void);
 	/// The function to call when reading Data Port B
-	u32 *portBReadFunc;
+	u8 (*portBReadFunc)(void);
 	/// The function to call when writing Data Port A
-	u32 *portAWriteFunc;
+	void (*portAWriteFunc)(u8);
 	/// The function to call when writing Data Port B
-	u32 *portBWriteFunc;
+	void (*portBWriteFunc)(u8);
 	/// The function to call when IRQ happens
-	u32 *irqFunc;
+	void (*irqFunc)(bool);
 } M6526;
 
 
@@ -126,4 +126,3 @@ int m6526GetStateSize(void);
 #endif
 
 #endif // ARM6526_HEADER
-
